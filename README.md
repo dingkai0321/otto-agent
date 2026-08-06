@@ -4,22 +4,11 @@
 
 ### A transparent, local-first agent runtime with memory, skills, tasks, and context governance
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-7c6ff0?style=for-the-badge)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Tests](https://img.shields.io/badge/Tests-483%20passing-45c4b8?style=for-the-badge)](#testing)
+[MIT License](LICENSE) · [Python 3.11+](https://www.python.org/) · [PostgreSQL + pgvector](https://www.postgresql.org/) · [Testing](#testing)
 
 **Documentation:** [Architecture](docs/architecture.md) · [Prompt Runtime](docs/prompt-runtime.md) · [Skills](docs/skills.md) · [Agent Status](docs/agent-status.md) · [Context Compaction](docs/context-compaction.md)
 
 <sub>Agent Loop · Lifecycle Hooks · Progressive Skills · Long-Term Memory · Knowledge RAG · Task System · Subagents · Sandboxed Tools</sub>
-
-</div>
-
----
-
-<div align="center">
-
-<img src="docs/architecture-whiteboard.png" alt="Otto architecture" width="920">
 
 </div>
 
@@ -337,17 +326,7 @@ These boundaries reduce risk; they are not a substitute for operating-system iso
 
 ## Tech Stack
 
-<div align="center">
-
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
-![pgvector](https://img.shields.io/badge/pgvector-HNSW-4169E1?style=flat-square)
-![Anthropic](https://img.shields.io/badge/Anthropic-supported-D4A574?style=flat-square)
-![OpenAI](https://img.shields.io/badge/OpenAI-compatible-000000?style=flat-square&logo=openai&logoColor=white)
-![Rich](https://img.shields.io/badge/Rich-CLI-red?style=flat-square)
-![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-optional-7B42BC?style=flat-square&logo=opentelemetry&logoColor=white)
-
-</div>
+Python 3.11+, PostgreSQL, pgvector, Rich, optional OpenTelemetry, and adapters for Anthropic, OpenAI, and other compatible model providers.
 
 ---
 
