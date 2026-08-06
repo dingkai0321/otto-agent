@@ -1,7 +1,7 @@
 {
   "type": "excalidraw",
   "version": 2,
-  "source": "waku/ops/whiteboard",
+  "source": "otto/ops/whiteboard",
   "elements": [
     {
       "id": "txt-0001",
@@ -5017,13 +5017,13 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "text": "measured on waku-agent, 2026-07-31 \u2014 docs/loop-vs-graph.md",
+      "text": "measured on otto-agent, 2026-07-31 \u2014 docs/loop-vs-graph.md",
       "fontSize": 16,
       "fontFamily": 5,
       "textAlign": "left",
       "verticalAlign": "top",
       "containerId": null,
-      "originalText": "measured on waku-agent, 2026-07-31 \u2014 docs/loop-vs-graph.md",
+      "originalText": "measured on otto-agent, 2026-07-31 \u2014 docs/loop-vs-graph.md",
       "lineHeight": 1.25
     },
     {

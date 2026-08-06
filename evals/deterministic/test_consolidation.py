@@ -24,10 +24,10 @@ from types import SimpleNamespace
 import pytest
 
 from evals.helpers import ScriptedClient, response, text_block
-from waku.db import connect
-from waku.memory.consolidation import SUMMARIZER_PROMPT, consolidate_if_due
-from waku.memory.episodic.store import SqliteEpisodeStore
-from waku.memory.semantic.store import SqliteFactStore
+from otto.db import connect
+from otto.memory.consolidation import SUMMARIZER_PROMPT, consolidate_if_due
+from otto.memory.episodic.store import PostgresEpisodeStore
+from otto.memory.semantic.store import PostgresFactStore
 
 DISTILLED = json.dumps({
     "facts": [{"subject": "Alex", "content": "Alex prefers morning meetings."},
@@ -38,13 +38,13 @@ DISTILLED = json.dumps({
 
 @pytest.fixture
 def memory(tmp_path):
-    """A real sqlite home — consolidation is mostly bookkeeping, and bookkeeping
+    """A real PostgreSQL schema — consolidation is mostly bookkeeping, and bookkeeping
     is exactly what an in-memory fake would fail to catch."""
     conn = connect(tmp_path)
     return SimpleNamespace(
         conn=conn,
-        facts=SqliteFactStore(conn),
-        episodes=SqliteEpisodeStore(conn),
+        facts=PostgresFactStore(conn),
+        episodes=PostgresEpisodeStore(conn),
         tmp_path=tmp_path,
     )
 
@@ -52,8 +52,8 @@ def memory(tmp_path):
 def add_exchanges(conn, n: int) -> None:
     """n exchanges = 2n rows. The threshold counts EXCHANGES, not messages."""
     for i in range(n):
-        conn.execute("INSERT INTO chat_log (role, content) VALUES ('user', ?)", (f"msg {i}",))
-        conn.execute("INSERT INTO chat_log (role, content) VALUES ('assistant', ?)", (f"reply {i}",))
+        conn.execute("INSERT INTO chat_log (role, content) VALUES ('user', %s)", (f"msg {i}",))
+        conn.execute("INSERT INTO chat_log (role, content) VALUES ('assistant', %s)", (f"reply {i}",))
     conn.commit()
 
 
@@ -84,7 +84,7 @@ def run(memory, script, every_n=3):
 
 
 def unconsolidated(conn) -> int:
-    return conn.execute("SELECT COUNT(*) FROM chat_log WHERE consolidated = 0").fetchone()[0]
+    return conn.execute("SELECT COUNT(*) FROM chat_log WHERE consolidated = false").fetchone()[0]
 
 
 # ---------- the threshold
@@ -178,7 +178,7 @@ def test_consolidated_rows_are_never_read_twice(memory):
 def test_only_the_rows_it_read_are_marked(memory):
     """Messages that arrive DURING a consolidation must survive it. The UPDATE
     targets explicit ids for exactly this reason — a blanket
-    'UPDATE chat_log SET consolidated=1' would swallow them unsummarised."""
+    'UPDATE chat_log SET consolidated=true' would swallow them unsummarised."""
     add_exchanges(memory.conn, 3)
     seen = memory.conn.execute("SELECT id FROM chat_log").fetchall()
 
@@ -191,7 +191,7 @@ def test_only_the_rows_it_read_are_marked(memory):
                        "small-model", 3, memory.facts, memory.episodes)
 
     still_open = memory.conn.execute(
-        "SELECT id FROM chat_log WHERE consolidated = 0").fetchall()
+        "SELECT id FROM chat_log WHERE consolidated = false").fetchall()
     assert len(still_open) == 2, "the late exchange must still be waiting its turn"
     assert {r["id"] for r in still_open}.isdisjoint({r["id"] for r in seen})
 

@@ -23,7 +23,7 @@ the MAINTAINER'S machine, which is the only place the wheel is built and the
 only place the problem can exist. Run the suite before you build — that is the
 whole protection.
 
-Personal skills belong in `~/.waku/skills/`, which waku already reads and which
+Personal skills belong in `~/.otto/skills/`, which otto already reads and which
 is nowhere near the package.
 """
 
@@ -55,7 +55,7 @@ def test_every_skill_on_disk_is_tracked():
         f"{sorted(untracked)}.\n\n"
         "pyproject force-includes this whole folder into the wheel, so building "
         "a release right now would publish it to PyPI — permanently.\n\n"
-        "If it is a personal skill, move it to ~/.waku/skills/ (waku reads that "
+        "If it is a personal skill, move it to ~/.otto/skills/ (otto reads that "
         "too, and it is nowhere near the package). If it belongs to the project, "
         "commit it."
     )
@@ -82,4 +82,4 @@ def test_the_build_still_force_includes_skills():
     with (REPO / "pyproject.toml").open("rb") as fh:
         cfg = tomllib.load(fh)
     wheel = cfg["tool"]["hatch"]["build"]["targets"]["wheel"]
-    assert wheel.get("force-include", {}).get("skills") == "waku/skills"
+    assert wheel.get("force-include", {}).get("skills") == "otto/skills"

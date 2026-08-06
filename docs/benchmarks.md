@@ -1,6 +1,6 @@
-# Model comparison — the Waku benchmark battery
+# Model comparison — the Otto benchmark battery
 
-How Waku compares models, what each test measures, and how to read the result.
+How Otto compares models, what each test measures, and how to read the result.
 This is the **Eval / LLM-Ops** pillar pointed sideways: instead of grading one
 agent over time, we run the *same task through many brains at once* and score
 the outcome — not just the receipts.
@@ -108,7 +108,7 @@ ones to add.
 
 ### A. Agentic tool-calling — the assistant's real job
 
-Multi-step orchestration over Waku's flagship tools (`create_event`,
+Multi-step orchestration over Otto's flagship tools (`create_event`,
 `save_note`, `send_message`, read-only `search_web`). This is the axis K3 is
 built to win (its headline is Terminal-Bench / agentic tool use).
 
@@ -133,7 +133,7 @@ precisely what a fluency-only judge misses and a Completion score catches.
 
 ### B. Coding — cross-model, via pi   **[built — CLI]**
 
-Waku is the orchestrator; **pi** is the coding contractor — but for a *coding*
+Otto is the orchestrator; **pi** is the coding contractor — but for a *coding*
 benchmark we point pi at each **contestant's** model, so one fixed harness
 auditions every brain. A coding case seeds a sandbox, hands pi the task, then
 scores by **running the produced code's `verify` command** — SWE-bench style
@@ -154,11 +154,11 @@ Run it:
 make shootout-coding RUNS="kimi:kimi-k3 anthropic:claude-opus-4-8"
 ```
 pi natively speaks every provider we pin (anthropic, openai, google/gemini,
-**moonshotai/kimi**, xai/grok, zai/glm) — the runner maps Waku's provider id to
+**moonshotai/kimi**, xai/grok, zai/glm) — the runner maps Otto's provider id to
 pi's and passes the key with `--api-key`, so K3 races the field on identical
 footing. Verified live: opus-4-8 and kimi-k3 both solve `code-fizzbuzz` (scored
 by real test execution). The scorer lives in
-[`waku/ops/coding_eval.py`](../waku/ops/coding_eval.py).
+[`otto/ops/coding_eval.py`](../otto/ops/coding_eval.py).
 
 **In the live arena too — through the LOOP, not around it:** turn on the
 **"coding (pi)"** toggle and race. This registers `delegate_task` for the race,
@@ -174,13 +174,13 @@ loop brain + pi can take minutes; film 2-3 models.)
 
 **Where the code lands + auto-run:** a scratch coding task doesn't vanish in a
 temp dir — `delegate_task` saves it to a dated, self-documenting workspace
-(`./waku_workspace/<date>/<time>-<model>-<slug>/`, git-ignored) with a
+(`./otto_workspace/<date>/<time>-<model>-<slug>/`, git-ignored) with a
 `MANIFEST.md` (date, model, task, files, run result), the files pi wrote, the pi
 transcript, and `run.log`. After pi finishes, the harness **auto-runs** the entry
 script (headless, captured, 30s timeout) and feeds the result back into the loop,
 so the model sees whether its own code actually ran. Config:
-`WAKU_WORKSPACE` (root), `WAKU_DELEGATE_AUTORUN=0` (disable), `WAKU_AUTORUN_TIMEOUT`.
-See [`waku/tools/workspace.py`](../waku/tools/workspace.py).
+`OTTO_WORKSPACE` (root), `OTTO_DELEGATE_AUTORUN=0` (disable), `OTTO_AUTORUN_TIMEOUT`.
+See [`otto/tools/workspace.py`](../otto/tools/workspace.py).
 
 ### C. Memory & context
 
@@ -199,28 +199,30 @@ axis moving independently of Completion.
 
 ## 4. Sub-agent spawning — already built (`delegate_task` → pi)
 
-Yes, Waku already does Hermes / Claude-Code-style sub-agent spawning. It lives in
-[`waku/tools/experimental.py`](../waku/tools/experimental.py) as `delegate_task`
-and is **off by default** — set `WAKU_EXPERIMENTAL=1` to register it.
+Yes, Otto already does Hermes / Claude-Code-style sub-agent spawning. It lives in
+[`otto/tools/experimental.py`](../otto/tools/experimental.py) as `delegate_task`
+and is **off by default** — set `OTTO_EXPERIMENTAL=1` to register it.
 
 - **What it is:** the "Sub-Agents" box on the architecture whiteboard, wired for
   real. It hands a coding job to **pi** (Mario Zechner's minimal open-source
   coding agent, `github.com/earendil-works/pi`) via its headless print mode
   (`pi -p "task"`).
-- **The division of labor is the teaching point:** Waku is the orchestrator
+- **The division of labor is the teaching point:** Otto is the orchestrator
   (memory, working-memory assembly, the human's context, the release gate); pi
-  is the specialist contractor (read / bash / edit / write). Waku hires; pi
-  codes; Waku's gate inspects the work.
+  is the specialist contractor (read / bash / edit / write). Otto hires; pi
+  codes; Otto's gate inspects the work.
 - **Honesty contract:** the tool's return string says exactly what happened
   (done / failed / timed-out / pi-not-installed); the full pi transcript goes to
-  `.waku/outbox/delegate-*.log`.
+  `.otto/outbox/delegate-*.log`.
 - **Requires:** `npm install -g --ignore-scripts @earendil-works/pi-coding-agent`.
 - **This is the substrate for Battery B** — each coding case is a `delegate_task`
   scored by whether pi's output passes tests.
 
-Three sibling boxes are still honest skeletons (return "coming soon"):
-`run_command` (Terminal), `browse_web` (Browser), `schedule_task` (Cron) — each
-needs a real sandbox + safety surface before it goes live.
+Two sibling boxes remain honest, non-callable roadmap placeholders:
+`browse_web` (Browser) and `schedule_task` (Cron). The Terminal box has graduated
+to the core `run_command` tool: an approval-gated host shell with a scrubbed
+environment, timeout, and hard-deny policy. It is deliberately not described as
+a sandbox; isolated computation belongs to the separate `python` tool.
 
 *v2 idea already noted in the source:* run `pi --mode json` and stream its
 per-turn events into the dashboard's Loop tab, so a delegated coding run animates
@@ -231,7 +233,7 @@ the same way a normal loop does.
 ## 5. The judge — a switchable, neutral referee
 
 The Quality axis grades each reply 0–10 + a one-line reason via
-[`waku/ops/judge.py`](../waku/ops/judge.py). The referee is **switchable from the
+[`otto/ops/judge.py`](../otto/ops/judge.py). The referee is **switchable from the
 arena** (the dropdown next to the "grade" toggle) and defaults to **gpt-5.6-sol**.
 
 **Why not K3 as the judge:** you can't test K3 with K3 as the grader — a
@@ -240,7 +242,7 @@ also *racing*, so judging every column at once hammered its own endpoint and
 429'd, blanking most grades. The referee should be a model that **isn't racing**.
 gpt-5.6-sol is the natural pick: a strong reasoning model that makes a poor
 *contestant* here (it can't call tools on the chat endpoint) but a fine *judge*
-(grading is pure text). Any provider works — Waku's OpenAI-compat client gives
+(grading is pure text). Any provider works — Otto's OpenAI-compat client gives
 the judge the same interface as the anthropic wire.
 
 **What the grade means (say this on camera):** 0–10 for how well the reply serves
@@ -285,7 +287,7 @@ complement, not a substitute.
 ```bash
 # CLI shootout — deterministic Completion across models, prints a markdown table
 make shootout RUNS="kimi:kimi-k3 anthropic:claude-opus-4-8"
-#   → also writes a timestamped .md + .json to .waku/shootout/
+#   → also writes a timestamped .md + .json to .otto/shootout/
 
 # Live arena — race every pinned model on one prompt, watch it stream
 make dashboard            # localhost:7777 → Arena tab
@@ -313,7 +315,7 @@ serious setups use both:
 2. **LLM-as-judge + Elo** — for open-ended quality where there's no single right
    answer. MT-Bench, Chatbot Arena. Subjective but scales. → **our Quality axis.**
 
-**What Waku already has:** the case format (`dataset.jsonl`), deterministic
+**What Otto already has:** the case format (`dataset.jsonl`), deterministic
 scoring, a cross-model CLI (`shootout.py`), a judge harness, and a live arena for
 Speed/Cost/Tokens.
 
@@ -321,13 +323,13 @@ Speed/Cost/Tokens.
 - ~~Completion column wired into the live arena~~ — **done**: a race on a known
   battery case now scores each column live (green "solved" / red "failed · why"
   badge + a "solved" scoreboard column), via the one scorer in
-  [`waku/ops/scoring.py`](../waku/ops/scoring.py) shared with `shootout.py`.
+  [`otto/ops/scoring.py`](../otto/ops/scoring.py) shared with `shootout.py`.
 - ~~Battery section B (coding) + cross-model pi~~ — **done, CLI *and* live arena**:
   `make shootout-coding` for the table; in the arena, the "coding (pi)" toggle
   runs each card through pi on its own model with the terminal streaming live,
   scored by tests.
 - ~~Quality column (K3-as-judge) in the arena~~ — **done**: the "grade with K3"
-  toggle judges each reply 0-10 ([`waku/ops/judge.py`](../waku/ops/judge.py));
+  toggle judges each reply 0-10 ([`otto/ops/judge.py`](../otto/ops/judge.py));
   per-column badge + a "K3 grade" scoreboard column.
 - ~~A cost-vs-quality visualization~~ — **done**: the scoreboard leads with a
   cost-vs-(quality|completion) scatter — cheap & good is top-left.
@@ -381,14 +383,14 @@ cost** by clicking the headers. This is the "is opus 2× the price 2× better?" 
 make shootout-coding RUNS="kimi:kimi-k3 anthropic:claude-opus-4-8 gemini:gemini-3.5-flash"
 ```
 Each model's pi writes real code, scored by tests passing. Report saved to
-`.waku/shootout/coding-*.md`.
+`.otto/shootout/coding-*.md`.
 
 ### Optional — the reproducible CLI table (all agentic cases, all models)
 ```bash
 make shootout RUNS="kimi:kimi-k3 anthropic:claude-opus-4-8 gemini:gemini-3.5-flash openai:gpt-5.3-chat-latest xai:grok-4.5"
 ```
 `--trials 3` for stable pass-RATES (tool-calling is nondeterministic); saves a
-markdown + json report to `.waku/shootout/` anyone can reproduce with their keys.
+markdown + json report to `.otto/shootout/` anyone can reproduce with their keys.
 
 ### Gotchas to rehearse around
 - **gpt-5.6-sol** errors every race on purpose (reasoning model, can't tool-call

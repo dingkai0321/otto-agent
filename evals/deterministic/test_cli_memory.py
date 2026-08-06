@@ -1,35 +1,35 @@
-"""DETERMINISTIC EVAL - the CLI /memory command reads local SQLite state."""
+"""DETERMINISTIC EVAL - the CLI /memory command reads PostgreSQL state."""
 
 from __future__ import annotations
 
-from waku.db import connect
-from waku.gateway.cli import _memory_snapshot
+from otto.db import connect
+from otto.gateway.cli import _memory_snapshot
 
 
 def test_memory_snapshot_reads_seeded_home(tmp_path):
     conn = connect(tmp_path)
     conn.execute(
-        "INSERT INTO facts (subject, content, source) VALUES (?, ?, ?)",
-        ("project", "Waku stays local-first", "user"),
+        "INSERT INTO facts (subject, content, source) VALUES (%s, %s, %s)",
+        ("project", "Otto stays local-first", "user"),
     )
     conn.execute(
-        "INSERT INTO facts (subject, content, source) VALUES (?, ?, ?)",
+        "INSERT INTO facts (subject, content, source) VALUES (%s, %s, %s)",
         ("alex", "Alex prefers morning meetings", "consolidation"),
     )
     conn.execute(
-        "INSERT INTO episodes (happened_at, summary) VALUES (?, ?)",
+        "INSERT INTO episodes (happened_at, summary) VALUES (%s, %s)",
         ("2026-07-16", "Planned the launch"),
     )
     conn.execute(
-        "INSERT INTO episodes (happened_at, summary) VALUES (?, ?)",
+        "INSERT INTO episodes (happened_at, summary) VALUES (%s, %s)",
         ("2026-07-17", "Reviewed the launch checklist"),
     )
-    conn.execute("INSERT INTO chat_log (role, content, consolidated) VALUES ('user', 'old', 1)")
+    conn.execute("INSERT INTO chat_log (role, content, consolidated) VALUES ('user', 'old', true)")
     conn.execute(
-        "INSERT INTO chat_log (role, content, consolidated) VALUES ('user', 'new question', 0)"
+        "INSERT INTO chat_log (role, content, consolidated) VALUES ('user', 'new question', false)"
     )
     conn.execute(
-        "INSERT INTO chat_log (role, content, consolidated) VALUES ('assistant', 'new answer', 0)"
+        "INSERT INTO chat_log (role, content, consolidated) VALUES ('assistant', 'new answer', false)"
     )
     conn.commit()
 
@@ -37,7 +37,7 @@ def test_memory_snapshot_reads_seeded_home(tmp_path):
 
     assert "Semantic facts (2)" in snapshot
     assert "[alex] Alex prefers morning meetings" in snapshot
-    assert "[project] Waku stays local-first" in snapshot
+    assert "[project] Otto stays local-first" in snapshot
     assert "Recent episodes (2)" in snapshot
     assert "2026-07-17 - Reviewed the launch checklist" in snapshot
     assert "2026-07-16 - Planned the launch" in snapshot

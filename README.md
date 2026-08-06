@@ -1,569 +1,365 @@
-# waku-agent
+<div align="center">
 
-**Your own AI assistant. On your laptop. In code you can read in an afternoon.**
+# Otto
 
-Meet **Waku** — a local-first personal assistant that shows the four pillars behind every
-serious agent: **Harness · Loop · Memory · Eval/LLM-Ops**. No frameworks hiding the good parts.
-Built by [seanchen.io](https://seanchen.io).
+### A transparent, local-first agent runtime with memory, skills, tasks, and context governance
 
-- **Local-first.** Your memory is one SQLite file. Open it. Read it. It's yours.
-- **Memory is the hero.** Semantic + episodic + procedural — with a gate that decides *whether*
-  to remember, and a pass that decides *what* to keep.
-- **The loop is ~95 lines** of plain Python. Step through it.
-- **Watch it think.** A local dashboard lights up every message as it flows through the harness.
-- **Eval built in.** Deterministic tests *and* LLM-as-judge, side by side, with a release gate.
+[![License: MIT](https://img.shields.io/badge/License-MIT-7c6ff0?style=for-the-badge)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Tests](https://img.shields.io/badge/Tests-483%20passing-45c4b8?style=for-the-badge)](#testing)
 
-![waku-agent architecture — the whiteboard](docs/architecture-whiteboard.png)
+**Documentation:** [Architecture](docs/architecture.md) · [Prompt Runtime](docs/prompt-runtime.md) · [Skills](docs/skills.md) · [Agent Status](docs/agent-status.md) · [Context Compaction](docs/context-compaction.md)
 
-> The system-design whiteboard from the series.
-> Every box maps to a file — see [the whiteboard maps to the code](#the-whiteboard-maps-to-the-code).
+<sub>Agent Loop · Lifecycle Hooks · Progressive Skills · Long-Term Memory · Knowledge RAG · Task System · Subagents · Sandboxed Tools</sub>
 
-**▶ [Watch the 20-min code walkthrough](https://www.youtube.com/watch?v=rvRyBhILrls&list=PLE9hy4A7ZTmpGq7GHf5tgGFWh2277AeDR&index=42)** — the loop, the memory pillars, the evals, the Telegram gateway and the "Waku Waku" wake word, live.
+</div>
 
-[YouTube](https://www.youtube.com/@SeanAIStories) · [X](https://x.com/ShenSeanChen) · [LinkedIn](https://linkedin.com/in/shen-sean-chen) · [Instagram](https://www.instagram.com/sean_ai_stories) · [TikTok](https://www.tiktok.com/@sean_ai_stories) · [Discord](https://discord.gg/tvECErKcFr) ·
-[哔哩哔哩](https://space.bilibili.com/479332937) · [小红书](https://www.xiaohongshu.com/user/profile/5cf02cfb0000000005014371) · [抖音](https://www.douyin.com/user/MS4wLjABAAAAWCkd62_e8q4n-S34LIL04HsYN3m03l8MFdVYZToojP8)
+---
 
-### ☕️ [Buy me a coffee](https://buy.stripe.com/5kA176bA895ggog4gh) — it keeps this repo (and the videos) coming
+<div align="center">
 
-## Quickstart
+<img src="docs/architecture-whiteboard.png" alt="Otto architecture" width="920">
 
-Just want to run it:
+</div>
 
-```bash
-pip install waku-agent
-waku                                    # talk to your Waku in the terminal
-waku dashboard                          # …or the browser cockpit → localhost:7777
-```
+## Overview
 
-It will tell you which key to set the first time. Want to **read the code** (the
-point of this repo) or contribute — clone it instead:
+Otto is a readable agent runtime for people who care about how an agent actually works. It keeps the important machinery visible: prompt assembly, model/tool iteration, permission checks, memory retrieval, Skill activation, task progress, context compaction, subagent isolation, and tracing.
 
-```bash
-git clone https://github.com/ShenSeanChen/waku-agent && cd waku-agent
-uv venv && uv pip install -e .          # create the env + install the `waku` command
-cp .env.example .env                    # pick a provider, paste ONE key
-uv run waku                             # talk to your Waku in the terminal
-uv run waku dashboard                   # …or the browser cockpit → localhost:7777
-```
+It is deliberately built from small Python modules instead of hiding the execution path behind a large framework. Every major mechanism maps to a file you can inspect, test, and replace.
 
-`uv run waku …` needs **no venv activation**. Three ways to run it:
+The design follows one rule throughout: **stable instructions stay at the front; dynamic observations are appended near the model's generation point.** This preserves prompt-cache-friendly prefixes while keeping current tasks, environment state, tool counts, retrieved memory, and errors visible when they matter.
 
-| Command | When |
-|---|---|
-| `uv run waku dashboard` | quick start, zero activation (recommended) |
-| `source .venv/bin/activate` → `waku dashboard` | activate once, bare `waku` all session |
-| `uv tool install .` → `waku dashboard` | install `waku` **globally**, forever |
+---
 
-`waku` and `waku dashboard` are two doors into the **same** Waku. The dashboard is a tiny web
-server on *your* machine — chat in the browser, that process runs the turn. Nothing leaves your
-laptop. Set `TELEGRAM_BOT_TOKEN` and it starts your bot too. (`make dashboard` works as well.)
+## Core Modules
 
-**Now try it.** *"Remember that Alex prefers morning meetings."* Quit. Restart.
-*"Book a catch-up with Alex on Friday."* → it remembers, and books 9am. Your memory is one
-file: `.waku/state.db`.
+### 🔁 Transparent Agent Loop
 
-**Use the model you already pay for.** Anthropic (default), OpenAI, Gemini, DeepSeek, MiniMax,
-Kimi, GLM, OpenRouter (one key, hundreds of hosted models), OpenCode Zen, or OpenCode Go —
-set `WAKU_PROVIDER=`, paste the key, done. One dialect in the loop;
-a [~60-line adapter](waku/loop/models.py) handles the rest.
+[`otto/loop/agent.py`](otto/loop/agent.py) owns the model → tool → observation cycle. It supports native tool calls, bounded iterations, tool-result timestamps, Stop hooks, permission checks, active Skill tracking, and layered context compaction.
 
-## Watch the harness run — the dashboard
+The loop exits when the model returns a final answer without tool calls, or when a deterministic guardrail stops further execution.
 
-```bash
-waku dashboard          # starts a local server → http://localhost:7777
-```
+### 🪝 Lifecycle Hooks
 
-A small web server you own (`127.0.0.1`, no cloud). The browser is just the UI — the same
-process runs every turn. This is the fastest way to *get* the system.
+[`otto/hooks.py`](otto/hooks.py) provides one event bus for the whole runtime:
 
-A chat dock sits on every tab. Type or **speak**, and watch it flow through the harness on the
-Overview diagram: gate lights up → loop calls a tool → reply comes back → memory updates. The
-frontend is plain static files. No build step.
+- prompt submission and pre-LLM context
+- model start/end events
+- pre/post tool execution
+- terminal permission decisions
+- memory, graph, subagent, and Stop events
+- read-only observers for gateways and tracing
 
-Each tab is one pillar, linked to the real files:
+Behavior can be extended without embedding unrelated logic inside the agent loop. Permission enforcement remains the terminal phase, so an ordinary hook cannot rewrite an approved operation afterward.
 
-| Tab | What you see |
-|---|---|
-| **Overview** | cost, latency, the gate skip/retrieve split, the clickable architecture map |
-| **Gateway** | one conversation across every channel, each message tagged by source (dashboard / telegram / voice / cli) |
-| **Loop** | every turn with its gate decision, tool calls, tokens, and cost |
-| **Graph** | graph workflows: the live triage topology (drawn from the engine itself) + which door each turn took |
-| **Memory** | sub-tabs per pillar — semantic facts, episodes, editable skills + SOUL, consolidation |
-| **Tools** | the agent's available tools (grouped by origin), its results, and MCP connectors |
-| **Data** | a live SQLite browser: per-table tabs, schema, and a read-only SQL console over `state.db` |
-| **Ops** | eval verdict + history, the gate decisions, slowest turns, and inline JSONL traces |
+### 🧠 Four-Part Memory System
 
-The sidebar and chat dock are drag-resizable and hideable, and the chat has *New chat* +
-history like any chat app.
+Otto uses PostgreSQL as its single structured-data backend:
 
-## Things to try (each shows off a pillar)
-
-Type these in the chat dock (or `make run`) and watch the dashboard light up:
-
-| Try this | What it shows | Where to watch |
+| Memory | Purpose | Storage and retrieval |
 |---|---|---|
-| *"Schedule a tennis game with Raj this Saturday at 8am"* | the Loop calls a tool (`create_event`) | the **LOOP** box pulses; **Loop** tab shows `iter 2` |
-| *"What's on my calendar today?"* | reading the calendar (`list_events`) | it answers from `state.db`, no made-up events |
-| *"When am I swimming with Sergey?"* then *"what's 12 × 8?"* | the **retrieval gate** — retrieve vs skip | Overview gate bar; **Ops** shows the per-turn decision |
-| *"Remember that Raj prefers evening games"* | memory self-management (`save_note`) | **Memory ▸ Semantic** gains a fact; `MEMORY.md` updates |
-| *"Search for the World Cup games still left to play and add each one to my calendar"* | **multi-tool loop engineering** | **Loop** tab shows `iter 8`: `search_web` × N → `create_event` × N |
-| chat from `make run` **and** the browser | one brain, many gateways | the **Gateway** tab tags each message `cli` / `dashboard` |
+| **Semantic** | durable user facts and preferences | PostgreSQL full-text search |
+| **Episodic** | dated events and conversation summaries | PostgreSQL with chronological retrieval |
+| **Procedural** | instructions for how to perform work | `SKILL.md` packages on disk |
+| **Knowledge RAG** | imported PDF, DOCX, and text content | PostgreSQL FTS + pgvector HNSW |
 
-**The money shot** is the World Cup one. In one turn, Waku searches the web a few times, reasons
-over the results, and books every remaining match — **8 loop iterations**, live. Needs a free
-`TAVILY_API_KEY` (paste it in **Settings**). Watch the **LOOP** box pulse per cycle. That's loop
-engineering, on tape.
+A retrieval gate decides whether a turn needs long-term memory before searching. Conversation consolidation runs in batches and only marks source messages complete after durable facts and episodes have been written successfully.
 
-## How is this different from ChatGPT / Claude Desktop?
+`.otto/MEMORY.md` remains a human-readable mirror; PostgreSQL is the queryable source of truth.
 
-Those are products you *use*. This is a codebase you *own* — the loop, the memory schema, the
-gate, the eval harness, all yours to read and change. Understand this repo, and you understand
-what the products do under the hood.
+### 🧩 Progressive Skill Loading
 
-Versus the big open-source assistants (OpenClaw, Hermes)? Same architecture, 1/100th the code.
-Products vs. a readable blueprint.
+Skills are domain workflows, not another pile of permanent tools.
 
-## The whiteboard gallery — editable system-design charts
+1. At startup, only each Skill's `name` and routing-oriented `description` enter the stable system prompt.
+2. When needed, the model calls `load_skill` and receives the complete `SKILL.md` as a tool result at that point in the trajectory.
+3. Detailed references, scripts, templates, and assets are loaded only when the active Skill asks for them.
 
-Every whiteboard from the videos lives in [`docs/whiteboards/`](docs/whiteboards) as an
-**editable `.excalidraw` source** — download one, drop it on [excalidraw.com](https://excalidraw.com),
-and remix it for your own team:
+This gives the model discoverability without paying the context cost of every full Skill on every request. See [Skills](docs/skills.md).
 
-| Chart | What it explains |
-|---|---|
-| [`k3-architecture.excalidraw`](docs/whiteboards/k3-architecture.excalidraw) | Kimi K3: the 16-of-896 MoE, KDA + AttnRes attention, why agent loops get cheap |
-| [`pi-architecture.excalidraw`](docs/whiteboards/pi-architecture.excalidraw) | pi (72K-star coding agent): 4-tool core, extensions, one EventStream |
-| [`waku-architecture.excalidraw`](docs/whiteboards/waku-architecture.excalidraw) | Waku itself — harness, loop, memory pillars, LLM Ops (editable rebuild of [the whiteboard](docs/architecture-whiteboard.png)) |
-| [`loop-vs-graph.excalidraw`](docs/whiteboards/loop-vs-graph.excalidraw) | Loop vs graph engineering — the ladder, and two timelines from a measured run of `waku brief` against `waku gather` ([the write-up](docs/loop-vs-graph.md)) |
+### 📋 Task System and Agent Status Bar
 
-New charts land here with every video. If they help you,
-[a star](https://github.com/ShenSeanChen/waku-agent) keeps them coming — and
-[sponsoring](https://github.com/sponsors/ShenSeanChen) gets new whiteboards early.
+Otto combines persistent tasks with a code-generated status message. Tasks support `pending`, `in_progress`, `completed`, and deleted states, dependencies, ownership, and session/shared scopes.
 
-## The whiteboard maps to the code
+Before every model generation, [`otto/runtime/status.py`](otto/runtime/status.py) appends a final user-role framework message containing:
 
-This diagram renders straight from the README (it's [Mermaid](https://mermaid.js.org/) text, not an
-image — edit it in a PR):
+- current time and timezone
+- workspace, operating system, shell, and Python version
+- loop iteration and remaining budget
+- task progress and the current work item
+- tool-call counts, failures, and repeated-call warnings
+- last observation and active Skills
+
+The status bar is recomputed by code, never by another model. It is not persisted into conversation history and never replaces the original context.
+
+### 📐 Context Governance
+
+[`otto/runtime/context.py`](otto/runtime/context.py) uses a layered strategy:
+
+1. archive oversized tool results and retain bounded previews
+2. compact older tool observations while preserving call/result pairs
+3. safely trim old trajectory prefixes at message boundaries
+4. ask a small model for a structured summary near the context limit
+5. preserve recent messages and re-inject active Skill instructions
+6. fail open to deterministic recovery if summarization fails
+
+The trigger reserves both output capacity and a safety buffer instead of waiting for a provider overflow error. See [Context Compaction](docs/context-compaction.md).
+
+### 🤝 Subagents
+
+Otto supports isolated specialist runs for research, planning, review, and analysis. Native subagents receive a bounded context and role-specific tool allowlist; read-only roles cannot silently gain write, shell, or Python execution privileges.
+
+The parent remains the orchestrator. Child results return as tool observations, so the same Hook, permission, tracing, task, and context systems remain in force. See [Subagents](docs/subagents.md).
+
+### 🛠️ Small General Tool Surface
+
+The permanent execution surface stays compact while Skills provide changing domain workflows:
+
+| Tool | Role | Safety boundary |
+|---|---|---|
+| `read_file` | paginated text reads | workspace-bound canonical paths |
+| `write_file` / `apply_patch` | file mutation | approval required, atomic writes |
+| `list_files` / `search_files` | repository discovery | workspace-bound |
+| `run_command` | general terminal execution | explicit approval, timeout, clean environment |
+| `python` | code interpretation | OS sandbox, no network, isolated write directory |
+| `fetch_url` | bounded HTTP(S) retrieval | public-address validation, redirect and size limits |
+
+Domain operations with strict permissions or structured parameters remain dedicated tools. See [General Tools](docs/general-tools.md).
+
+### 🔍 Observability and Evaluation
+
+Every turn produces a JSONL trace under `.otto/traces/`. Optional OpenTelemetry export supports external trace viewers without changing the loop.
+
+The evaluation layer separates two different questions:
+
+- deterministic tests: did the correct mechanism and tool behavior occur?
+- model-judged tests: was the final response useful and high quality?
+
+The release gate requires deterministic correctness before considering judge scores.
+
+---
+
+## Request Lifecycle
 
 ```mermaid
-flowchart LR
-  GW["Gateway<br/>cli · telegram · voice · dashboard"] --> WM["Working memory<br/>SOUL.md + memory + history"]
-  WM --> LLM
-  subgraph LOOP["The Loop — loop/agent.py"]
-    LLM["LLM"] -->|tool call| TOOLS["Tools<br/>create_event · list_events<br/>search_web · save_note · …"]
-    TOOLS -->|result| LLM
-  end
-  LLM -->|reply| REPLY["Reply"] --> GW
-  GATE{{"Retrieval gate<br/>does this turn need memory?"}} -. only if needed .-> WM
-  MEM[("Memory — state.db<br/>SQLite + FTS5<br/>semantic · episodic · procedural")] --> GATE
-  REPLY -. save chat .-> MEM
-  MEM -->|every N chats| CONS["Consolidate → facts"] --> MEM
-  REPLY --> OPS["LLM Ops<br/>trace → eval → gate → release"]
-  OPS -. improved prompt/config .-> WM
-  WM -.- WATERMARK["waku-agent · Sean's AI Stories · @ShenSeanChen"]:::wm
-  classDef wm fill:none,stroke:none,color:#9aa0aa,font-size:11px;
+flowchart TD
+    A[Gateway input] --> B[Session and timestamp]
+    B --> C[UserPromptSubmit hooks]
+    C --> D[SOUL + Skill metadata catalog]
+    D --> E[Recent conversation history]
+    E --> F[Memory retrieval gate]
+    F --> G[Dynamic memory and hook context]
+    G --> H[Trailing Agent Status Bar]
+    H --> I[LLM call with native tool schemas]
+    I -->|tool call| J[PreToolUse hooks]
+    J --> K[Permission policy]
+    K --> L[Tool execution]
+    L --> M[Timestamped tool observation]
+    M --> H
+    I -->|final answer| N[Persist exchange]
+    N --> O[Consolidation and trace export]
+    O --> P[Gateway output]
 ```
 
-> _Architecture of **waku-agent** — built on the series
-> ([@ShenSeanChen](https://github.com/ShenSeanChen)). Code is MIT; **this diagram is licensed CC BY-NC-SA 4.0** —
-> reuse it with credit to the channel, not for commercial resale._
+### Prompt assembly order
 
-Every box is one module (full version with every file path: [docs/architecture.md](docs/architecture.md)):
+```text
+request
+├── system: SOUL → Skill name/description catalog
+├── tools: name → description → input schema
+└── messages
+    ├── bounded recent history
+    ├── timestamped current user input
+    ├── assistant/tool trajectory
+    ├── optional retrieved memory and hook context
+    └── trailing <agent_status> snapshot
+```
 
-| Diagram box | Module |
+Provider and model names are not injected into the prompt. Tool definitions use the provider's native `tools` field rather than being rendered as system text.
+
+---
+
+## Quick Start
+
+### 1. Install PostgreSQL and pgvector
+
+On macOS with Conda:
+
+```bash
+conda install -c conda-forge postgresql pgvector
+
+initdb -D ~/.local/share/otto/postgres -U "$USER" --auth=trust --encoding=UTF8
+pg_ctl -D ~/.local/share/otto/postgres -l ~/.local/share/otto/postgres.log start
+createdb otto
+psql -d otto -c 'CREATE EXTENSION IF NOT EXISTS vector'
+```
+
+If PostgreSQL is already running, only the database and extension commands are needed.
+
+### 2. Install Otto
+
+```bash
+git clone https://github.com/dingkai0321/otto-agent.git
+cd otto-agent
+
+uv venv
+uv pip install -e '.[dev,knowledge]'
+cp .env.example .env
+```
+
+### 3. Configure one model provider
+
+```env
+OTTO_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your-key-here
+```
+
+Provider adapters are also available for OpenAI, Gemini, DeepSeek, Kimi, MiniMax, GLM, OpenRouter, xAI, OpenCode Zen, and OpenCode Go.
+
+### 4. Run
+
+```bash
+make run
+```
+
+Or use the installed command directly:
+
+```bash
+otto
+```
+
+Start the local dashboard:
+
+```bash
+otto dashboard
+```
+
+The dashboard listens on `127.0.0.1:7777` by default.
+
+---
+
+## Knowledge RAG
+
+Import documents:
+
+```bash
+otto knowledge add handbook.pdf policy.docx notes.md
+```
+
+Inspect sources and retrieval:
+
+```bash
+otto knowledge list
+otto knowledge search "What is the refund policy?"
+```
+
+Text chunks are indexed with PostgreSQL full-text search. When an embedding key is configured, pgvector adds semantic similarity; ranking combines both signals.
+
+---
+
+## Useful Commands
+
+| Command | Purpose |
 |---|---|
-| Gateway Interface (CLI / voice / Telegram / web) | [`waku/gateway/`](waku/gateway) |
-| Ephemeral Agent Run → Working Memory | [`waku/runtime/session.py`](waku/runtime/session.py) |
-| The Loop (LLM ↔ tools, end-loop guardrails) | [`waku/loop/agent.py`](waku/loop/agent.py) |
-| Graph workflows (structure around the loop) | [`waku/graph/`](waku/graph) |
-| Agentic Tools (schedule / note / message) | [`waku/tools/`](waku/tools) |
-| Procedural Memory (SKILL.md, "how to act") | [`waku/memory/procedural/`](waku/memory/procedural) + [`skills/`](skills) |
-| Semantic Memory (durable facts, profile) | [`waku/memory/semantic/`](waku/memory/semantic) |
-| Episodic Memory (dated events, past chats) | [`waku/memory/episodic/`](waku/memory/episodic) |
-| "Should we even retrieve?" gate | [`waku/memory/retrieval_gate.py`](waku/memory/retrieval_gate.py) |
-| Consolidate after N chats → summarizer | [`waku/memory/consolidation.py`](waku/memory/consolidation.py) |
-| Trace (1 trace per run) | [`waku/ops/tracing.py`](waku/ops/tracing.py) |
-| Eval: deterministic vs LLM-as-judge | [`evals/deterministic/`](evals/deterministic) vs [`evals/judge/`](evals/judge) |
-| Gate → Release | [`waku/ops/release_gate.py`](waku/ops/release_gate.py) |
+| `otto` or `make run` | terminal conversation |
+| `otto dashboard` or `make dashboard` | browser cockpit |
+| `otto voice` or `make voice` | optional voice gateway |
+| `otto brief` | loop-based morning briefing |
+| `otto gather` | graph-arranged parallel gathering workflow |
+| `otto knowledge add ...` | import knowledge documents |
+| `otto skill install <url>` | install a Skill package |
+| `make eval` | deterministic evaluation suite |
+| `make lint` | static checks |
 
-**A note on `MEMORY.md` vs `state.db`.** Some assistants (e.g. Hermes) keep long-term memory as a
-single `MEMORY.md` markdown file. Waku keeps the *queryable* source in `state.db` (the `facts` and
-`episodes` tables, keyword-searchable via FTS5) **and** regenerates a human-readable
-`.waku/MEMORY.md` mirror after every turn — so you get both: a real file you can open, backed by a
-sturdy database. The dashboard's **Memory** tab is the friendly view; the **Database** tab shows the
-raw `state.db` tables.
+Inside a conversation, `/context` reports the current context budget and `/compact` requests manual compaction.
 
-## The Loop — reason → act → repeat
+---
 
-Yes, there's a real agent loop, and it's [~95 lines of plain Python](waku/loop/agent.py) —
-no LangGraph, no hidden control flow (and when a task needs structure *around* the loop,
-that structure is another ~200 readable lines — see
-[Graph workflows](#graph-workflows--when-a-turn-needs-shape) below):
+## Project Map
 
-```
-while not done:
-    response = llm(messages, tools)      # reason
-    if response wants tools:
-        results = run(tool_calls)        # act
-        messages += results              # observe
-    else:
-        done                             # reply to the human
+```text
+otto/
+├── app.py                 # application orchestration
+├── hooks.py               # lifecycle bus and terminal permission hook
+├── permissions.py         # deny → rules → approval policy
+├── gateway/               # CLI, voice, Discord, WhatsApp
+├── loop/                  # provider adapters and agent loop
+├── runtime/               # prompt, session, status bar, compaction
+├── memory/                # semantic, episodic, procedural, Knowledge RAG
+├── tasks/                 # PostgreSQL-backed task model
+├── tools/                 # general and domain tools
+├── graph/                 # optional structured workflows around the loop
+└── ops/                   # dashboard, tracing, evaluation, release gate
+
+skills/                    # built-in and community Skill packages
+evals/                     # deterministic and model-judged evaluations
+docs/                      # architecture and mechanism documentation
 ```
 
-Two guardrails end every turn: the model stops asking for tools (natural end), or it hits
-`max_iterations` (hard stop — it never spins forever). That's "loop engineering": the exit
-conditions, the tool round-trip, and feeding results back as working memory.
+---
 
-**How to show it on camera:**
-1. Type *"schedule a swim with Sergey Saturday at 5pm"* in the chat dock and watch the **LOOP**
-   box on the Overview diagram light up: reason → `create_event` → reason → reply.
-2. Open the **Loop** tab — every turn is listed with its gate decision, each tool call, the
-   **iteration count**, tokens, and dollar cost. A tool-using turn shows `iter 2` (reason,
-   act, then reason again to reply); a plain answer shows `iter 1`.
-3. Open the **Ops** tab (or `.waku/traces/<today>.jsonl`) to read that same turn as raw
-   events in order: `turn_start → gate → llm → tool → llm → turn_end`. That's the loop, on tape.
+## Testing
 
-**The multi-tool loop (the money shot).** One tool is a loop; *chaining* tools is where loop
-engineering earns its name. Try:
-
-> *"Search for the World Cup games still left to play and add each one to my calendar."*
-
-The agent loops across two tools: [`search_web`](waku/tools/search.py) reads the web, it
-reasons over the results, then calls [`create_event`](waku/tools/calendar.py) once per match —
-several iterations in a single turn. You'll see `iter 4`, `iter 5`… on the Loop tab and the
-LOOP box pulse for each cycle. `search_web` works keyless via DuckDuckGo but that endpoint
-rate-limits bots, so for a clean take set a free `TAVILY_API_KEY` (see [`.env.example`](.env.example)).
-
-## Graph workflows — when a turn needs shape
-
-The loop is one agent turn: the model picks tools until it stops, and that covers chat.
-But some work has **shape** — steps that could run *at the same time*, and explicit
-"if this, go here" routing. A **graph workflow** makes that shape first-class: nodes
-(each does one job — a function, one LLM call, or a whole loop turn) connected by edges
-(what happens next). It's an extension of the Loop pillar, not a replacement:
-[`loop/agent.py`](waku/loop/agent.py) did not change one line — a graph *arranges calls
-around it, and to it*. And it's still no-framework: the entire engine is
-[one readable file](waku/graph/engine.py), same trick as the loop.
-
-```mermaid
-flowchart LR
-  subgraph L["The loop — one path, step after step"]
-    T["think"] --> A["act"] --> O["observe"] --> T
-  end
-  subgraph G["A graph workflow — a map of steps"]
-    S(["START"]) --> C["classify<br/>small model"]
-    S --> K["check calendar<br/>local read"]
-    C --> R{"route"}
-    K --> R
-    R -. quick .-> Q["quick reply<br/>small model"] --> E(["END"])
-    R -. full .-> F["full agent<br/>THE loop, as a node"] --> E
-  end
-```
-
-**The shipped example: triage.** Flip `WAKU_GRAPH_WORKFLOWS=1` (in `.env`, or the
-dashboard's Settings) and *every* message enters the triage graph first — you never
-choose a mode, the harness decides. A small model classifies the message **while**
-today's calendar loads in parallel; *"thanks!"* gets a fast small-model reply and never
-wakes the big model; *"schedule a swim Saturday"* routes into the exact same loop as
-before, running as one node. Any failure anywhere — classifier, engine, anything —
-**fails open** to the plain loop, so the flag can only ever save time and tokens. This
-is the retrieval-gate idea generalized from one gate to a structure. (A graph is *not*
-a swarm of chatting agents: the edges decide everything, deterministically — which is
-why it can be traced and eval'd like everything else here.)
-
-**How to show it on camera:**
-1. Switch the flag on, then send *"thanks!"* — on **Overview**, the graph panel lights
-   the quick path while the LOOP boxes stay dark: proof the big model never woke.
-2. Send *"schedule a swim Saturday 9am"* — watch `route → full_agent` light up, then the
-   familiar loop animation take over. Same loop, one graph node.
-3. Open the **Graph** tab: the live topology there is drawn from the engine's own
-   `describe()` — the picture *cannot* drift from the code. The trace
-   (`.waku/traces/<today>.jsonl`) shows the run on tape:
-   `graph_start → node_start … route → graph_end`.
-
-## The two hero moments
-
-**1. The retrieval gate.** Most agents hit their memory store on every turn. That's
-slow, and worse — irrelevant memories bias answers. Here a cheap model first answers
-one question: *does this message need memory at all?* Watch it in the terminal:
-
-```
-you > what's 2+2?
-  gate · skip — pure math
-you > when am I meeting Alex?
-  gate · retrieve — references user's plans
-```
-
-**2. Deterministic eval vs LLM-as-judge.** *"Did it create the right calendar event?"*
-is a unit test — 0 or 1, no model judges it (`make eval`). *"Was the reply helpful?"*
-is a judged score with a threshold (`make eval-judge`). Conflating the two is the most
-common eval mistake; here they're separate suites you can diff. `make gate` runs both
-as a release gate.
-
-## Eval, tracing & catching bugs
-
-Three commands, two kinds of eval — the LLM-Ops half of the system:
+Run the deterministic suite without invoking a paid model:
 
 ```bash
-make eval          # deterministic: "did the right tool fire?" — 0 or 1, no model judges it
-make eval-judge    # LLM-as-judge: "was the reply helpful?" — a scored %, needs a key
-make gate          # the release gate: deterministic must pass 100%, judge must clear threshold
+ANTHROPIC_API_KEY= OTTO_API_KEY= make eval
 ```
 
-Deterministic tests are plain pytest in [`evals/deterministic/`](evals/deterministic); judged
-ones use DeepEval in [`evals/judge/`](evals/judge). Keeping them apart is the whole point —
-conflating "did it do the thing" (a unit test) with "was it any good" (a scored judgement) is
-the most common eval mistake.
+Current local result:
 
-**Where the results show:** the terminal, and the dashboard's **Ops** tab — the release-gate
-verdict, an **eval-history** table (one row per `make gate`, so you can see it grow), the actual
-per-turn gate decisions, and the raw traces inline.
+```text
+483 passed, 11 skipped
+```
 
-**The bug workflow (this is the discipline you show on camera):** when you catch a bug by using
-the thing live, you fix it AND add a deterministic case so it can never come back. A real example
-from this repo: the agent didn't know the current *time* and asked for it before scheduling
-"in 30 minutes" → fixed in [`session.py`](waku/runtime/session.py), locked forever by
-[`test_working_memory.py`](evals/deterministic/test_working_memory.py). Run `make gate` → green →
-the eval history records the run.
-
-**Spend is permanent:** every LLM call's tokens are appended to `.waku/usage.jsonl` — an
-append-only ledger that a demo reset never wipes. The **Ops** tab shows the all-time cost, tokens,
-and a per-day / per-provider breakdown (dollar cost is estimated from tokens, which are the ground
-truth). So the number you show on camera is your real running total, not a per-session guess.
-
-**Tracing is always on:** every turn appends readable lines to `.waku/traces/<date>.jsonl`
-(zero setup) — a trace is just "what happened, in order." For span-waterfall views:
+The skipped cases are optional live-provider evaluations. Static checks:
 
 ```bash
-pip install -e '.[tracing]'
-make trace                                            # Phoenix at localhost:6006
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 make run
+make lint
 ```
 
-Langfuse cloud speaks the same OTel toggle.
+---
 
-## Recording a clean demo
+## Security Model
 
-```bash
-python scripts/demo_seed.py --yes      # resets .waku to a tidy, curated state (--yes required)
-```
+- `.env`, `.otto/`, credentials, traces, and generated artifacts are excluded from publication.
+- File tools resolve canonical paths and enforce the configured workspace boundary.
+- Writes and host commands require permission according to runtime policy.
+- Sandboxed Python runs without network access and cannot write arbitrarily into the workspace.
+- URL fetching rejects private, loopback, link-local, credential-bearing, and unsafe redirect targets.
+- Unattended gateways fail closed when an operation requires interactive approval.
 
-It backs up your current `.waku` first, then seeds a few clean facts, one episode, and one
-event — Sergey's standing **Saturday 5 PM swim**. The chat log and traces start **empty**, so
-when you type live the Loop, traces, and Gateway inbox fill up in front of the viewer. The
-memory/Data/Tools tabs already have tidy content to explain. Edit the seed lists at the top of
-the script to taste.
+These boundaries reduce risk; they are not a substitute for operating-system isolation when handling untrusted workloads.
 
-## Talk to it
+---
 
-```bash
-uv pip install -e '.[voice]'
-waku voice        # hands-free: always-listening for "waku waku"
-```
+## Tech Stack
 
-**Hands-free by default.** `waku voice` listens for the wake word **"waku waku"** — a tiny
-Whisper model scans the mic; when it hears the phrase, the big model takes over for your
-command and speaks the reply. Change or disable it:
+<div align="center">
 
-```bash
-WAKU_WAKE_WORD="hey waku"  waku voice     # any phrase, no training
-WAKU_WAKE_WORD=""          waku voice     # push-to-talk instead (Enter, speak, Enter)
-```
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![pgvector](https://img.shields.io/badge/pgvector-HNSW-4169E1?style=flat-square)
+![Anthropic](https://img.shields.io/badge/Anthropic-supported-D4A574?style=flat-square)
+![OpenAI](https://img.shields.io/badge/OpenAI-compatible-000000?style=flat-square&logo=openai&logoColor=white)
+![Rich](https://img.shields.io/badge/Rich-CLI-red?style=flat-square)
+![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-optional-7B42BC?style=flat-square&logo=opentelemetry&logoColor=white)
 
-The matcher is ~15 transparent lines with a deterministic eval; it accepts cross-script
-variants (`"waku waku,わくわく"`). A trained openWakeWord model is the efficient v2 upgrade.
+</div>
 
-**A beautiful voice.** Out of the box it uses macOS `say` — and Waku auto-picks the nicest
-voice you have, preferring a downloaded Premium/Enhanced one (System Settings ▸ Accessibility
-▸ Spoken Content ▸ System Voice) over the robotic built-ins. For the real neural upgrade,
-install [Kokoro](https://github.com/hexgrad/kokoro) — a fully local, offline British-butler
-voice that's picked up automatically, no env var needed:
+---
 
-```bash
-uv pip install '.[voice-neural]'          # neural Kokoro (bm_george); pulls torch (~2GB)
-```
+## License
 
-Override either engine with `WAKU_VOICE` (a `say` voice name, or a Kokoro voice like `bf_emma`).
+[MIT](LICENSE). See the license file for copyright and attribution details.
 
-## Phone to laptop
+---
 
-```bash
-pip install -e '.[telegram]'
-# message @BotFather, /newbot, put the token in .env, then:
-make telegram
-```
+<div align="center">
 
-Text your bot from anywhere and your laptop runs the turn — long-polling, so no
-public URL or webhook. Set `TELEGRAM_ALLOWED_USER` to lock it to just you.
+<sub>Built for understanding, extending, and testing the full agent data path.</sub><br>
+<sub>If Otto helps you build a better agent, a ⭐ is appreciated.</sub>
 
-## Brief me on my week (Apple Calendar + Mail)
-
-```bash
-WAKU_APPLE_TOOLS=1 make brief      # macOS; grant the permission prompts once
-```
-
-Waku reads your **real** Calendar.app (including events invited by email) and
-recent Apple Mail, cross-references your memory, and writes a focus-first briefing
-with clickable `message://` links. Cron it for a morning greeting:
-
-```
-30 7 * * *  cd ~/waku-agent && make brief
-```
-
-It runs through the normal harness, so it animates on the dashboard like any turn.
-
-## Mirror created events to Google Calendar
-
-The local SQLite database and `calendar.ics` stay authoritative. To also write
-`create_event` results to Google Calendar, install the opt-in extra and configure
-[Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc):
-
-```bash
-pip install -e '.[gcal]'
-# Keep the downloaded client file OUTSIDE the repo — it is only an input to
-# gcloud, which stores the resulting credentials in ~/.config/gcloud/.
-gcloud auth application-default login \
-  --client-id-file=~/.config/waku/gcal-client.json \
-  --scopes=https://www.googleapis.com/auth/calendar.events
-WAKU_GOOGLE_CALENDAR=1 waku
-```
-
-Nothing secret ever needs to live in the repo: the client file is read once by
-`gcloud`, and the credentials it mints land in `~/.config/gcloud/`. (`.gitignore`
-also blocks `credentials.json` and `*token*.json` as a second line of defence.)
-
-The target defaults to the signed-in user's `primary` calendar; set
-`WAKU_GOOGLE_CALENDAR_ID` for another calendar. `list_events` still reads the
-local database. Google failures never roll back the local event, and attendee
-notifications are suppressed (`sendUpdates=none`).
-
-## It manages its own memory
-
-The agent has tools to keep itself useful — no black box:
-- **manage_memory** — correct or forget a fact when you say it's wrong.
-- **update_soul** — save a standing preference you give it (lives in `SOUL.md`).
-- **create_skill** — when you teach it a repeatable workflow, it offers to save it
-  as a skill (written to `.waku/skills/`, live the same session).
-
-You can also edit any of this by hand on the dashboard's Memory tab (edit/delete
-facts, rewrite `SOUL.md`) or in Settings (switch provider/model, paste keys — BYOK,
-kept in your local `.env`, never sent to the browser).
-
-## Connect MCP servers
-
-```bash
-pip install -e '.[mcp]'
-```
-
-Create `.waku/mcp.json` and any Model Context Protocol server's tools appear to
-the agent, namespaced `<server>_<tool>` (and in the dashboard's Tools ▸ MCP tab):
-
-```json
-{"servers": [{"name": "fs", "command": "npx",
-  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]}]}
-```
-
-**Node-free demo** — a tiny self-contained Python MCP server ships in the repo:
-
-```bash
-cp examples/mcp.demo.json .waku/mcp.json   # points at examples/mcp_demo_server.py
-make dashboard                               # demo_word_count / demo_reverse_text appear in Tools
-```
-
-Same pattern scales to any server, yours or a vendor's — no changes to Waku's code.
-
-## Add skills — yours or the community's
-
-Skills are procedural memory: markdown instructions loaded only when relevant.
-
-```bash
-python -m waku skill install https://github.com/<someone>/<repo>/blob/main/skills/<skill>/SKILL.md
-```
-
-**Contribute one — it's just a markdown file.** Copy [`skills/TEMPLATE.md`](skills/TEMPLATE.md),
-PR it into [`skills/community/`](skills/community). CI validates the frontmatter.
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Every command
-
-The `waku` command is installed with the package; the `make` targets are equivalent aliases.
-
-| Command | Does |
-|---|---|
-| `waku` | chat in the terminal |
-| `waku dashboard` | the live cockpit at localhost:7777 (+ Telegram if `TELEGRAM_BOT_TOKEN` is set) |
-| `waku voice` | talk to it — hands-free "waku waku" (or push-to-talk) |
-| `waku telegram` | message it from your phone (standalone) |
-| `waku brief` | morning briefing from Calendar + Mail + memory |
-| `make trace` | deep trace waterfalls (Phoenix) at localhost:6006 |
-| `make eval` | deterministic evals (0/1, no judge) |
-| `make eval-judge` | LLM-as-judge evals (scored %) |
-| `make gate` | the release gate — both eval suites must pass |
-
-## Roadmap — the whiteboard boxes beyond the flagship task
-
-These live in [`waku/tools/experimental.py`](waku/tools/experimental.py), OFF by default —
-`WAKU_EXPERIMENTAL=1` registers them.
-
-**Sub-Agents is now LIVE.** `delegate_task` hands a coding job to
-[pi](https://github.com/earendil-works/pi) — Mario Zechner's minimal open-source coding agent —
-through its headless print mode (`pi -p "task"`). Waku stays the orchestrator (memory, context,
-evals); pi is the specialist contractor (read/bash/edit/write). Try it:
-
-```bash
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
-WAKU_EXPERIMENTAL=1 uv run waku
-# "have pi fix the failing test in ~/my-project"
-```
-
-The full pi transcript lands in `.waku/outbox/delegate-*.log`; tune the budget with
-`WAKU_DELEGATE_TIMEOUT` (default 300s).
-
-The rest are still deliberate **skeletons** — the intent is drawn so the diagram maps to
-something, but nothing is over-promised (they report "coming soon", and the dashboard's
-**Tools** tab lists them under **Coming soon**):
-
-| Whiteboard box | Tool | Status |
-|---|---|---|
-| Sub-Agents | `delegate_task` | **live** — delegates coding tasks to pi |
-| Graph workflows | [`waku/graph/`](waku/graph) | **live** behind `WAKU_GRAPH_WORKFLOWS=1` — [triage-first turns](#graph-workflows--when-a-turn-needs-shape) |
-| Terminal tool | `run_command` | skeleton — needs a real sandbox + safety surface first |
-| Browser tool | `browse_web` | skeleton — `search_web` already covers read-only lookups |
-| Cron Job | `schedule_task` | skeleton — `make brief` + a system cron line covers it today |
-
-The point of a teaching repo is a readable core; these come alive one at a time, tested.
-
-## Upgrade paths (when you outgrow the defaults)
-
-| Default (zero setup) | Upgrade | How |
-|---|---|---|
-| SQLite FTS5 keyword memory | Supabase pgvector semantic search | `WAKU_SEMANTIC_STORE=supabase` + [sql/init_supabase.sql](sql/init_supabase.sql) — the exact schema from [launch-rag](https://github.com/ShenSeanChen/launch-rag)/[launch-agentic-rag](https://github.com/ShenSeanChen/launch-agentic-rag) |
-| Mock calendar (ICS + SQLite) | Apple / Google Calendar | `WAKU_APPLE_CALENDAR=1` (macOS) or `WAKU_GOOGLE_CALENDAR=1` with `pip install -e '.[gcal]'` — the tool schema stays |
-| Hand-built memory pillars | mem0 / Letta / Zep | production frameworks that automate what this repo teaches |
-
-## Related repos (the building blocks)
-
-[launch-rag](https://github.com/ShenSeanChen/launch-rag) ·
-[launch-agentic-rag](https://github.com/ShenSeanChen/launch-agentic-rag) ·
-[launch-agent-skills](https://github.com/ShenSeanChen/launch-agent-skills) ·
-[launch-mcp-demo](https://github.com/ShenSeanChen/launch-mcp-demo) ·
-[launch-DeepResearch-Backend](https://github.com/ShenSeanChen/launch-DeepResearch-Backend)
-
-## Community
-
-Star the repo, join the [Discord](https://discord.gg/7Ntxzm3eJ), and grab a
-[good first issue](https://github.com/ShenSeanChen/waku-agent/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
-— that link is the live list, so it's always current. Gateways, memory backends and
-community skills are all shaped to be first PRs; the easiest needs no Python at all
-(see [contributing a skill](CONTRIBUTING.md)).
-
-**Comment on an issue before you start** and it gets assigned to you, so two people
-never build the same thing.
-
-## Also from me
-
-- **[launch-mvp-stripe-nextjs-supabase](https://github.com/ShenSeanChen/launch-mvp-stripe-nextjs-supabase)** — NextJS + Supabase + Stripe, everything you need to ship a SaaS.
-- **[AutoManus.io](https://automanus.io)** — my AI startup: a sales lead manager for made-to-order products. It embeds where conversations already happen (WhatsApp, email, web chat) to capture inbound, automate follow-ups and kill CRM busywork. Pre-seed backed by Character VC. ([AutoManus Discord](https://discord.gg/5HhcNjCR))
-
-MIT — see [LICENSE](LICENSE). Built by [@ShenSeanChen](https://github.com/ShenSeanChen)
-([YouTube](https://www.youtube.com/@SeanAIStories) · [X](https://x.com/ShenSeanChen)).
+</div>

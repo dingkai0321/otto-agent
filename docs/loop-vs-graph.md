@@ -4,7 +4,7 @@
 > A graph **pre-determines** what happens next.
 
 Both ship in this repo, doing the same job, so you can read them against each
-other: `waku brief` is a loop, `waku gather` is a graph. Everything below was
+other: `otto brief` is a loop, `otto gather` is a graph. Everything below was
 measured on those two.
 
 ---
@@ -123,7 +123,7 @@ What's actually new is narrow, and it's worth being precise about:
    can produce different output.
 2. **A model can pick the edge.** Routing is data-dependent in a way a DAG
    scheduler never had to handle.
-3. **So you need guardrails Airflow never needed.** waku's engine caps visits
+3. **So you need guardrails Airflow never needed.** otto's engine caps visits
    per node and total steps, because a graph with a model in it can otherwise
    loop forever with perfect confidence.
 
@@ -133,7 +133,7 @@ Old shape, new contents.
 
 ## The thing worth realising
 
-Open waku's architecture diagram — gateway → memory → loop → tools → reply,
+Open otto's architecture diagram — gateway → memory → loop → tools → reply,
 same order every turn.
 
 **That's already a graph.** It was just hardcoded in Python instead of nodes and
@@ -150,11 +150,11 @@ That's the honest pitch. It's smaller than the hype and more useful.
 ## How it's built here
 
 ```
-waku/graph/engine.py             nodes, edges, waves — the whole mechanism
-waku/graph/nodes.py              tool_node / llm_node / agent_node / key_router
-waku/graph/workflows/triage.py   the per-message front door
-waku/graph/workflows/gather.py   the morning routine
-waku/ops/gather.py               where the pure workflow meets this machine
+otto/graph/engine.py             nodes, edges, waves — the whole mechanism
+otto/graph/nodes.py              tool_node / llm_node / agent_node / key_router
+otto/graph/workflows/triage.py   the per-message front door
+otto/graph/workflows/gather.py   the morning routine
+otto/ops/gather.py               where the pure workflow meets this machine
 ```
 
 **Three ideas carry the engine.** State is one dict every node reads and merges
@@ -179,7 +179,7 @@ prints the wait rather than hiding it.
 |---|---|---|
 | Trigger | every message, automatically | you — `make gather` |
 | Frequency | every turn | once a morning |
-| `WAKU_GRAPH_WORKFLOWS` | gated by it | **ignores it** |
+| `OTTO_GRAPH_WORKFLOWS` | gated by it | **ignores it** |
 
 Worth stating plainly, because two charts on one page look like two options you
 choose between. They aren't.
@@ -205,7 +205,7 @@ because the nodes shared a start.
 - no `agent_node`, no `run_loop`, no `ToolRegistry` anywhere in it
 - its one model call passes **no `tools` parameter**, so the model is never
   handed a schema it could use to send, merge or create anything
-- the only write is a markdown file in `.waku/outbox/` for a human to read
+- the only write is a markdown file in `.otto/outbox/` for a human to read
 
 A source-level test fails CI if any of that changes, because the day someone
 adds a tool-using node "to make the digest smarter", nothing else would notice.

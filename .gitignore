@@ -2,25 +2,24 @@ __pycache__/
 *.pyc
 .venv/
 .env
-state.db
 traces/
 *.ics
 .DS_Store
 dist/
 .pytest_cache/
 .ruff_cache/
-.waku/
-.waku.bak-*/
-.waku.prerename-bak/
+.otto/
+.otto.bak-*/
+.otto.prerename-bak/
 # Any ALTERNATE agent home, not just the default one. DISCORD_HOME gives the
-# bot its own memory (see waku/gateway/discord.py); WAKU_HOME can point anywhere.
-# Without this glob only `.waku/` was covered, so a second home's SOUL.md,
+# bot its own memory (see otto/gateway/discord.py); OTTO_HOME can point anywhere.
+# Without this glob only `.otto/` was covered, so a second home's SOUL.md,
 # usage.jsonl and outbox/ were tracked — the exact files you least want pushed.
-.waku-*/
+.otto-*/
 .env.prerename-bak
 
 # Delegated coding deliverables (dated run folders + auto-run logs)
-waku_workspace/
+otto_workspace/
 
 # Google OAuth: the client file you download from Cloud Console, and any token
 # it produces. Nothing here should ever be committed — belt and braces, because

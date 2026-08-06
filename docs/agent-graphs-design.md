@@ -1,7 +1,7 @@
 # Agent Graphs — system design
 
 Status: phases 1–3 SHIPPED (engine + triage graph workflow behind
-`WAKU_GRAPH_WORKFLOWS` + dashboard Graph tab). The content workflow (§4.2) and the
+`OTTO_GRAPH_WORKFLOWS` + dashboard Graph tab). The content workflow (§4.2) and the
 AutoManus port (§5) remain future work. Two shipped deviations from this doc:
 triage has no `search_memory` fan-out node (the full path's retrieval gate already
 covers it — a parallel prefetch would double-retrieve), and a `gather` fan-in node
@@ -10,7 +10,7 @@ Scope: a fifth pillar candidate — **Graph** — sitting beside Harness, Loop, 
 
 ## 1. What we're adding and why
 
-`waku/loop/agent.py` is one agent turn: a while-loop where the model picks tools until
+`otto/loop/agent.py` is one agent turn: a while-loop where the model picks tools until
 it stops. That covers every conversational task. What it cannot express:
 
 - **Parallel work** — three research calls that could run at once run one after another.
@@ -31,7 +31,7 @@ eval it, and explain it on a whiteboard.
 
 ## 2. Decision: no LangGraph
 
-Build a small engine in-repo. Reasons, in Waku terms:
+Build a small engine in-repo. Reasons, in Otto terms:
 
 1. **No new dependencies** rule — core stays stdlib + anthropic/openai.
 2. The teaching bar: "each pillar legible on its own." A ~200-line engine you can read
@@ -43,10 +43,10 @@ Build a small engine in-repo. Reasons, in Waku terms:
 Revisit only if graphs become the center of gravity (checkpointing/resume across
 processes, distributed nodes). Not now.
 
-## 3. The engine — `waku/graph/`
+## 3. The engine — `otto/graph/`
 
 ```
-waku/graph/
+otto/graph/
   engine.py       # Graph, Node, run_graph — the whole mechanism, one file
   nodes.py        # node factories: llm_node, tool_node, agent_node, router helpers
   workflows/      # one file per real workflow (triage.py, content.py, ...)
@@ -100,7 +100,7 @@ Everything is a `NodeFn`; these helpers just build common ones:
 
 | factory | wraps | typical use |
 |---|---|---|
-| `tool_node(fn, in_keys, out_key)` | plain function | DB lookup, FTS5 search, ICS read |
+| `tool_node(fn, in_keys, out_key)` | plain function | DB lookup, PostgreSQL search, ICS read |
 | `llm_node(prompt_template, out_key, small=True)` | ONE model call, no tools | classify, score, extract |
 | `agent_node(system, tools, out_key)` | a full `run_loop` turn with a **scoped ToolRegistry** | a step that genuinely needs multi-step tool use |
 | `human_node(question, out_key)` | pause; gateway asks, answer resumes | approval gates (phase 2+) |
@@ -128,17 +128,17 @@ the dashboard gets a graph timeline view later without touching the engine.
 
 Gate rule unchanged: `make gate` before any push; live bug → fix + regression case.
 
-## 4. Workflows in Waku (use cases 2 & 3)
+## 4. Workflows in Otto (use cases 2 & 3)
 
 ### 4.1 `workflows/triage.py` — inbound message triage (phase 2)
 
-For messages arriving via telegram/discord gateways: decide fast, in parallel, what an
+For messages arriving via Discord/WhatsApp gateways: decide fast, in parallel, what an
 incoming message needs before the main loop ever spends a big-model turn on it.
 
 ```
 START
   ├─ classify_intent   (llm_node, small model: question/task/urgent/social)
-  ├─ search_memory     (tool_node: FTS5 semantic store)
+  ├─ search_memory     (tool_node: PostgreSQL semantic store)
   └─ check_calendar    (tool_node: today's events from calendar.ics)
         ↓ (fan-in)
   route(intent, urgency):
@@ -183,7 +183,7 @@ Different repo, different constraints. Design here, build separately.
 
 ```
 START (contact_id, business_id)
-  ├─ fetch_history     (Supabase: whatsapp_messages filtered by agent_id, deals)
+  ├─ fetch_history     (PostgreSQL: messages filtered by agent_id, deals)
   ├─ research_company  (LLM + web/company enrichment)
   └─ recent_activity   (last-touch recency, channel, response latency)
         ↓ (fan-in) → score (LLM node → {score, reasons})

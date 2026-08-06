@@ -7,20 +7,31 @@ something "in 30 minutes." The system prompt must carry a real clock.
 
 from __future__ import annotations
 
-import re
+from collections import Counter
+from datetime import datetime
 
-from waku.config import load_settings
-from waku.runtime.session import Session
+from otto.config import load_settings
+from otto.runtime.session import Session
+from otto.runtime.status import AgentStatusBar
 
 
-def test_system_prompt_includes_current_time():
-    settings = load_settings()
-    settings.ensure_home()
-    system = Session(settings, memory=None).build_system("what should I do in 30 minutes?")
-    # a HH:MM clock must be present — not just a date — so the model never has
-    # to ask the user for the time (the live bug).
-    assert re.search(r"\b\d{2}:\d{2}\b", system), "system prompt is missing a HH:MM time"
-    assert "Right now it is" in system
+def test_agent_status_bar_includes_current_time(tmp_path):
+    status = AgentStatusBar(
+        tmp_path,
+        now=lambda: datetime.fromisoformat("2026-08-06T13:45:00+08:00"),
+    ).render(
+        iteration=1,
+        max_iterations=10,
+        elapsed_seconds=0.25,
+        tool_counts=Counter(),
+        tool_signature_counts=Counter(),
+        tool_failures=0,
+        last_tool=None,
+        active_skills=set(),
+        tool_output_chars=0,
+    )
+    assert "13:45:00+08:00" in status.text
+    assert 'timezone="CST"' in status.text
 
 
 def test_session_tags_history_with_its_session_id():
@@ -32,12 +43,11 @@ def test_session_tags_history_with_its_session_id():
     assert s.session_id == "s-test" and s.history == []
 
 
-def test_system_prompt_includes_own_model_identity():
-    """Live bug on the dashboard (K3 launch day): asked "what's ur model", the
-    agent said it had no idea what it was running on. The system prompt must
-    name the model + provider so the agent can answer honestly."""
+def test_prompt_excludes_provider_and_model_name():
     settings = load_settings()
     settings.ensure_home()
     settings.provider, settings.model = "kimi", "kimi-k3"
-    system = Session(settings, memory=None).build_system("what model are you?")
-    assert "kimi-k3" in system and "'kimi' provider" in system
+    prompt = Session(settings, memory=None).build_prompt("what model are you?")
+    assert "kimi-k3" not in prompt.dynamic_context
+    assert "kimi" not in prompt.dynamic_context
+    assert "kimi-k3" not in prompt.system
