@@ -1,6 +1,6 @@
 ---
 name: meeting-prep
-description: Prep me for a meeting or call — who I'm meeting, background, talking points. Use for "prep me for", "get me ready for", "what should I know before", "who am I meeting", "brief me on my call with".
+description: Prepare background and talking points for a meeting or call. Use for "prep me for", "get me ready for", "what should I know before", "who am I meeting", or "brief me on my call with". Do not use merely to create, move, or cancel a calendar event.
 ---
 
 ## How to prep

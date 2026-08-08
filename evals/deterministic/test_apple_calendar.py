@@ -1,7 +1,7 @@
 """Apple Calendar AppleScript generation is pure string logic — evaluable
 offline without ever touching the real Calendar app."""
 
-from waku.tools.calendar import _applescript_date, sync_to_apple_calendar
+from otto.tools.calendar import _applescript_date, sync_to_apple_calendar
 
 
 def test_date_sets_day_first_to_avoid_overflow():
@@ -27,15 +27,9 @@ def test_sync_escapes_quotes_and_backslashes():
 def test_create_event_handles_empty_call_gracefully():
     # Live bug: a model emitted create_event({}) mid-loop and Python raised a raw
     # TypeError. The tool must return a helpful message instead of crashing.
-    import sqlite3
+    from otto.tools.calendar import make_tool
 
-    from waku.tools.calendar import make_tool
-
-    conn = sqlite3.connect(":memory:")
-    conn.executescript(
-        'CREATE TABLE calendar_events (id INTEGER PRIMARY KEY, title TEXT, start TEXT, '
-        '"end" TEXT, attendees TEXT, notes TEXT, created_at TEXT);'
-    )
+    conn = object()  # validation returns before touching persistence
     import tempfile
     from pathlib import Path
     fn = make_tool(conn, Path(tempfile.mkdtemp())).fn

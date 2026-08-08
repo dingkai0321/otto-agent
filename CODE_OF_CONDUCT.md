@@ -4,14 +4,14 @@
 
 Be decent. Assume the other person is trying to help. Critique code, not people.
 
-waku is a teaching repo — a lot of the people opening their first-ever pull
+otto is a teaching repo — a lot of the people opening their first-ever pull
 request will do it here. That's the point, and it sets the bar for how we
 answer them.
 
 ## What that means in practice
 
 - **Explain the why.** "This won't work" is useless; "this crashes because the
-  SQLite connection is bound to the thread that opened it" teaches something.
+  PostgreSQL transaction belongs to one connection" teaches something.
 - **A rejected PR is not a rejected person.** If we decline a change, we say
   what would have made it land — and forking is always fair game, that's what
   MIT is for.

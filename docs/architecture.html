@@ -1,4 +1,4 @@
-<title>waku-agent — architecture</title>
+<title>otto-agent — architecture</title>
 <style>
   :root{
     --canvas:#fbfaf7; --ink:#1f1e1c; --muted:#6b6863; --paper:#ffffff;
@@ -62,20 +62,20 @@
      now WRONG, not merely old: it predates the Discord gateway, the model
      Arena, delegate_task -> pi, the Notion episodic backend and Google
      Calendar. Nothing in the repo links here; it is kept only so the first
-     picture of waku isn't lost. The current diagrams live in docs/whiteboards/.
-     If you are looking for how waku works TODAY, start with the README and
-     waku/ops/README.md.
+     picture of otto isn't lost. The current diagrams live in docs/whiteboards/.
+     If you are looking for how otto works TODAY, start with the README and
+     otto/ops/README.md.
 ------------------------------------------------------------------------- -->
 <div class="superseded">
   <b>Superseded — this is the launch-day diagram, kept for history.</b><br>
   It predates the Discord gateway, the model Arena, <code>delegate_task &rarr; pi</code>,
-  the Notion memory backend and Google Calendar. For how waku works today see the
-  <a href="https://github.com/ShenSeanChen/waku-agent#readme">README</a> and
-  <code>docs/whiteboards/waku-architecture.excalidraw</code>.
+  the Notion memory backend and Google Calendar. For how otto works today see the
+  <a href="https://github.com/ShenSeanChen/otto-agent#readme">README</a> and
+  <code>docs/whiteboards/otto-architecture.excalidraw</code>.
 </div>
 
 <header>
-  <h1><span class="hl">waku-agent</span> &mdash; the readable Waku</h1>
+  <h1><span class="hl">otto-agent</span> &mdash; the readable Otto</h1>
   <p class="tag">Your own personal assistant, on your own laptop. The whole system in one picture: <b>Harness &middot; Loop &middot; Memory &middot; Eval</b>.</p>
   <div class="legend">
     <b><span class="sw" style="border-color:var(--red)"></span>Harness (your machine)</b>
@@ -136,7 +136,7 @@
     <rect x="300" y="516" width="224" height="104" rx="12" fill="var(--paper)" stroke="var(--ink)" stroke-width="2"/>
     <rect x="560" y="516" width="224" height="104" rx="12" fill="var(--paper)" stroke="var(--ink)" stroke-width="2"/>
 
-    <!-- state.db cylinder -->
+    <!-- PostgreSQL cylinder -->
     <g fill="var(--grey-soft)" stroke="var(--ink)" stroke-width="1.8">
       <ellipse cx="690" cy="676" rx="44" ry="12"/>
       <path d="M646 676 v40 a44 12 0 0 0 88 0 v-40" fill="var(--grey-soft)"/>
@@ -215,7 +215,7 @@
     <text x="52" y="118" font-size="15" font-weight="700" fill="var(--green)">Gateway Interface</text>
     <text x="85" y="152" font-size="13" text-anchor="middle">CLI</text>
     <text x="155" y="152" font-size="13" text-anchor="middle">Voice</text>
-    <text x="236" y="152" font-size="12" text-anchor="middle">Telegram</text>
+    <text x="236" y="152" font-size="12" text-anchor="middle">Discord</text>
     <text x="306" y="152" font-size="13" text-anchor="middle">Web</text>
 
     <!-- ephemeral run -->
@@ -247,11 +247,11 @@
     <!-- memory stores -->
     <text x="152" y="546" font-size="14" text-anchor="middle" font-weight="700">Procedural</text>
     <text x="152" y="566" font-size="12" text-anchor="middle">how to act &middot; SKILL.md</text>
-    <text x="152" y="600" font-size="11" text-anchor="middle" fill="var(--red)">~/.waku/skills/</text>
+    <text x="152" y="600" font-size="11" text-anchor="middle" fill="var(--red)">~/.otto/skills/</text>
 
     <text x="412" y="546" font-size="14" text-anchor="middle" font-weight="700">Semantic</text>
     <text x="412" y="566" font-size="12" text-anchor="middle">durable facts &middot; profile</text>
-    <text x="412" y="600" font-size="11" text-anchor="middle" fill="var(--red)">SQLite FTS5 &middot; keyword top-k</text>
+    <text x="412" y="600" font-size="11" text-anchor="middle" fill="var(--red)">PostgreSQL full-text &middot; keyword top-k</text>
 
     <text x="672" y="546" font-size="14" text-anchor="middle" font-weight="700">Episodic</text>
     <text x="672" y="566" font-size="12" text-anchor="middle">dated events &middot; past chats</text>
@@ -260,7 +260,7 @@
     <text x="300" y="500" font-size="11" text-anchor="middle" fill="var(--muted)">keyword top-k, no embedding</text>
 
     <!-- consolidation -->
-    <text x="690" y="640" font-size="11.5" text-anchor="middle" fill="var(--red)">state.db (SQLite + FTS5)</text>
+    <text x="690" y="640" font-size="11.5" text-anchor="middle" fill="var(--red)">PostgreSQL + pgvector</text>
     <text x="815" y="470" font-size="11.5" text-anchor="middle" fill="var(--muted)" transform="rotate(78 815 470)">save messages</text>
     <text x="470" y="732" font-size="12" text-anchor="middle">consolidate after</text>
     <text x="470" y="748" font-size="12" text-anchor="middle">N new chats?</text>
@@ -305,6 +305,6 @@
 
 <footer>
   <p>Every box maps to one small module you can read in an afternoon &mdash;
-  <a href="https://github.com/ShenSeanChen/waku-agent">github.com/ShenSeanChen/waku-agent</a>.
+  <a href="https://github.com/ShenSeanChen/otto-agent">github.com/ShenSeanChen/otto-agent</a>.
   Built for <a href="https://www.youtube.com/@SeanAIStories">Sean&rsquo;s AI Stories</a>.</p>
 </footer>

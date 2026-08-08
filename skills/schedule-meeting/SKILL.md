@@ -1,6 +1,6 @@
 ---
 name: schedule-meeting
-description: Schedule meetings, calls, or events on the calendar. Use when the user wants to book, plan, schedule, or set up a meeting or appointment with someone at a time.
+description: Schedule meetings, calls, appointments, or calendar events. Use when the user wants to book, plan, schedule, or set up something at a time. Do not use when the user only wants to read or summarize an existing calendar.
 ---
 
 ## How to schedule well

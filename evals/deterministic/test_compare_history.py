@@ -7,7 +7,7 @@ contract: append + trim, isolation of the reply cap, and the aggregate math."""
 
 from __future__ import annotations
 
-from waku.ops import compare_history as ch
+from otto.ops import compare_history as ch
 
 
 def _result(spec, model, latency, tin, tout, cost, error=None):
@@ -26,19 +26,19 @@ def test_append_and_load_round_trip(tmp_path):
     assert r["model"] == "kimi-k3" and r["gate"] == "skip" and r["tools"] == ["create_event"]
 
 
-def test_it_writes_to_its_own_file_not_state_db(tmp_path):
+def test_it_writes_only_to_its_own_file(tmp_path):
     ch.append_run(tmp_path, "hi", [_result("a:b", "b", 1, 1, 1, 0.0)])
     assert (tmp_path / "compare" / "history.jsonl").exists()
-    assert not (tmp_path / "state.db").exists()   # never touches the agent's DB
+    assert {p.name for p in tmp_path.iterdir()} == {"compare"}
 
 
 def test_clear_wipes_only_the_history(tmp_path):
     ch.append_run(tmp_path, "hi", [_result("a:b", "b", 1, 1, 1, 0.0)])
-    (tmp_path / "state.db").write_text("real data")   # a sibling that must survive
+    (tmp_path / "MEMORY.md").write_text("real data")   # a sibling that must survive
     ch.clear(tmp_path)
     assert ch.load_runs(tmp_path) == []
     assert not (tmp_path / "compare" / "history.jsonl").exists()
-    assert (tmp_path / "state.db").read_text() == "real data"   # untouched
+    assert (tmp_path / "MEMORY.md").read_text() == "real data"   # untouched
 
 
 def test_history_is_capped(tmp_path, monkeypatch):

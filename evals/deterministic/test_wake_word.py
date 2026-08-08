@@ -3,29 +3,29 @@ Whisper mangles phrases in predictable ways; these cases pin the fuzziness."""
 
 import pytest
 
-from waku.gateway.voice import matches_wake
+from otto.gateway.voice import matches_wake
 
 SHOULD_WAKE = [
-    ("waku waku", "waku waku"),
-    ("Waku, waku!", "waku waku"),            # punctuation
-    ("wakuwaku", "waku waku"),               # whisper drops the space
-    ("so anyway waku waku schedule it", "waku waku"),  # embedded in speech
-    ("walku waku", "waku waku"),             # one-letter mangle → fuzzy match
-    ("Hey Waku", "hey waku"),
+    ("otto otto", "otto otto"),
+    ("Otto, otto!", "otto otto"),            # punctuation
+    ("ottootto", "otto otto"),               # whisper drops the space
+    ("so anyway otto otto schedule it", "otto otto"),  # embedded in speech
+    ("auto otto", "otto otto"),              # one-letter mangle → fuzzy match
+    ("Hey Otto", "hey otto"),
     ("hey computer, what's up", "hey computer"),
     # regression from the first live session: whisper wrote the wake word in
     # kana — variants after a comma cover other scripts
-    ("わくわく", "waku waku,わくわく"),
-    ("わくわくわく", "waku waku,わくわく"),
-    ("小助手你好", "waku waku,小助手"),
+    ("わくわく", "otto otto,わくわく"),
+    ("わくわくわく", "otto otto,わくわく"),
+    ("小助手你好", "otto otto,小助手"),
 ]
 
 SHOULD_NOT_WAKE = [
-    ("what a nice day", "waku waku"),
-    ("wake up call at nine", "waku waku"),
-    ("", "waku waku"),
-    ("waku waku", ""),                        # no wake word configured
-    ("walk to work", "waku waku"),
+    ("what a nice day", "otto otto"),
+    ("wake up call at nine", "otto otto"),
+    ("", "otto otto"),
+    ("otto otto", ""),                        # no wake word configured
+    ("walk to work", "otto otto"),
 ]
 
 

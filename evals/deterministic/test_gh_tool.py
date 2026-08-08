@@ -29,7 +29,7 @@ import subprocess
 
 import pytest
 
-from waku.tools import github
+from otto.tools import github
 
 
 class Boom(Exception):
@@ -104,11 +104,11 @@ def test_view_and_diff_require_a_real_number(no_subprocess):
 # --- argv construction ------------------------------------------------------
 
 def test_argv_is_built_from_literals(capture):
-    github.gh_read("pr view", number=42, repo="ShenSeanChen/waku-agent")
+    github.gh_read("pr view", number=42, repo="ShenSeanChen/otto-agent")
     argv = capture["argv"]
     assert argv[:3] == ["gh", "pr", "view"]
     assert argv[3] == "42", "the number must be placed by us, as its own element"
-    assert argv[4:6] == ["--repo", "ShenSeanChen/waku-agent"]
+    assert argv[4:6] == ["--repo", "ShenSeanChen/otto-agent"]
 
 
 def test_list_commands_ask_for_json_and_clamp_the_limit(capture):
@@ -200,7 +200,7 @@ def test_list_helpers_return_rows_for_the_router(monkeypatch):
               '"updatedAt":"2026-07-31T10:00:00Z","url":"http://x"}]'
     monkeypatch.setattr(github.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(
         a[0], 0, stdout=payload, stderr=""))
-    ok, rows = github.list_prs("ShenSeanChen/waku-agent")
+    ok, rows = github.list_prs("ShenSeanChen/otto-agent")
     assert ok and isinstance(rows, list) and rows[0]["number"] == 42
     assert "#42 Fix the thing — @octocat" in github.gh_read("pr list")
 
@@ -220,11 +220,11 @@ def test_the_tool_is_off_unless_asked_for(tmp_path):
     must not appear for people who never asked for it (CLAUDE.md's footprint
     ladder). The gather workflow imports this module directly and works with
     the switch off — the switch only decides whether the MODEL can reach it."""
-    from evals.helpers import ScriptedClient, make_waku
+    from evals.helpers import ScriptedClient, make_otto
 
-    off = make_waku(tmp_path / "off", client=ScriptedClient([]), gh_tool=False)
+    off = make_otto(tmp_path / "off", client=ScriptedClient([]), gh_tool=False)
     assert "github_read" not in off.tools._tools
-    on = make_waku(tmp_path / "on", client=ScriptedClient([]), gh_tool=True)
+    on = make_otto(tmp_path / "on", client=ScriptedClient([]), gh_tool=True)
     assert "github_read" in on.tools._tools
 
 

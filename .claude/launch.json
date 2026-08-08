@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "waku-dashboard",
+      "name": "otto-dashboard",
       "runtimeExecutable": ".venv/bin/python",
-      "runtimeArgs": ["-m", "waku.ops.dashboard"],
+      "runtimeArgs": ["-m", "otto.ops.dashboard"],
       "port": 7777,
       "autoPort": false
     },

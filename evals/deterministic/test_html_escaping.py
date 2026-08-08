@@ -27,7 +27,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-JS = Path(__file__).resolve().parents[2] / "waku/ops/static/js/util.js"
+JS = Path(__file__).resolve().parents[2] / "otto/ops/static/js/util.js"
 
 
 def _esc_source() -> str:
@@ -44,7 +44,7 @@ def test_esc_escapes_both_quote_characters():
     for ch, entity in (('"', "&quot;"), ("'", "&#39;")):
         assert entity in src, (
             f"esc() no longer escapes {ch!r} — a reply containing it can escape "
-            "an HTML attribute. See waku/ops/static/js/render.js's copy buttons."
+            "an HTML attribute. See otto/ops/static/js/render.js's copy buttons."
         )
 
 

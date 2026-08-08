@@ -1,6 +1,6 @@
-# waku-agent — working conventions
+# otto-agent — working conventions
 
-**Waku** — a local-first personal assistant demonstrating the four pillars behind every
+**Otto** — a local-first personal assistant demonstrating the four pillars behind every
 serious agent: Harness, Loop, Memory, and Eval/LLM-Ops. It began as a teaching repo you
 could read in an afternoon, and it's now growing toward a full open-source assistant (the
 next Hermes / OpenClaw). The bar for every change: **clear, honest code a newcomer can
@@ -10,26 +10,27 @@ for its own sake is not.
 
 ## Architecture map (file ↔ diagram box)
 
-- `waku/gateway/` — cli, voice (wake word), telegram. Gateways only move text.
-- `waku/runtime/session.py` — working memory assembly (SOUL.md + memory + history)
-- `waku/loop/agent.py` — THE loop; `loop/models.py` — pluggable providers, 2 wire formats
-- `waku/graph/` — engine + node factories + `workflows/` (triage) — opt-in structure
+- `otto/gateway/` — CLI, voice (wake word), Discord, WhatsApp. Gateways only move text.
+- `otto/runtime/session.py` — working memory assembly (SOUL.md + memory + history)
+- `otto/loop/agent.py` — THE loop; `loop/models.py` — pluggable providers, 2 wire formats
+- `otto/graph/` — engine + node factories + `workflows/` (triage) — opt-in structure
   AROUND the loop (the loop never changes; a graph node can BE a loop turn); every
   failure fails open to the plain loop
-- `waku/tools/` — create_event / save_note / send_message (flagship task only)
-- `waku/memory/` — semantic (FTS5) / episodic / procedural (SKILL.md) +
+- `otto/tools/` — create_event / save_note / send_message (flagship task only)
+- `otto/memory/` — semantic / episodic / procedural (SKILL.md) / knowledge RAG +
   `retrieval_gate.py` (hero 1) + `consolidation.py` (every N exchanges)
-- `waku/ops/` — tracing (JSONL + OTel), dashboard (localhost:7777), release_gate,
-  `compare_history.py` (the Compare arena's own JSONL scoreboard — never state.db)
+- `otto/ops/` — tracing (JSONL + OTel), dashboard (localhost:7777), release_gate,
+  `compare_history.py` (the Compare arena's own JSONL scoreboard — never PostgreSQL)
 - `evals/deterministic/` (0/1, pytest) vs `evals/judge/` (DeepEval, scored) — never mix
-- Runtime state lives in `.waku/` (state.db, calendar.ics, outbox/, traces/) — gitignored
+- Structured state lives in PostgreSQL; `.otto/` holds SOUL/MEMORY, skills,
+  calendar.ics, outbox/, and traces/
 
 ## Rules
 
 - **Be concise.** Sean wants short replies: lead with the answer, cut preamble and
   recap. A few lines beats a wall of text. Expand only when he asks for detail.
 - **Never wipe runtime data without asking first, every time.** `scripts/demo_seed.py`
-  and anything else that clears `.waku` (memory, calendar, chat log, traces, or the
+  and anything else that clears `.otto` (memory, calendar, chat log, traces, or the
   `usage.jsonl` spend ledger) must be proposed and explicitly approved by the user
   *immediately before each run*. Permission never carries over from a previous run.
   The script backs up first, but restoring is a hassle — ask, wait for a clear yes,
@@ -51,7 +52,7 @@ for its own sake is not.
   When a live bug is found, fix it AND add a regression case to `evals/deterministic/`.
 - **No emojis** in any UI surface (dashboard, CLI output, README prose).
 - **No new dependencies without discussion** — the core is stdlib + anthropic/openai.
-  Optional features go behind extras (`[voice]`, `[telegram]`, ...).
+  Optional features go behind extras (`[voice]`, `[discord]`, `[whatsapp]`, ...).
 - **Footprint ladder — where new capability goes.** Every registered tool ships in
   every prompt, so the core stays narrow and capability lives at the edges. In order:
   extend existing code → a skill (`SKILL.md`, no Python) → a CLI + README →

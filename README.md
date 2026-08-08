@@ -12,6 +12,8 @@
 
 </div>
 
+![Otto — Transparent Agent Runtime](docs/otto-theme.png)
+
 ## Overview
 
 Otto is a readable agent runtime for people who care about how an agent actually works. It keeps the important machinery visible: prompt assembly, model/tool iteration, permission checks, memory retrieval, Skill activation, task progress, context compaction, subagent isolation, and tracing.
